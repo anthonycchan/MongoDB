@@ -1,0 +1,277 @@
+Import to Atlas (cloud): (instructions in atlas website)
+    mongoimport --uri mongodb+srv://analytics:analytics-password@cluster0.fcrdz.mongodb.net/mflix --collection movies_initial --type csv --file movies_initial.csv --headerline
+Import to local database:
+    mongoimport --port 27017 --db mflix --collection movies_initial --type csv --file movies_initial.csv --headerline
+   
+Export with BSON:
+    mongodump --uri mongodb+srv://<your username>:<your password>@<your cluster>.mongodb.net/<DATABASE>
+    mongodump --uri mongodb+srv://m001-student:m001-student-basic@sandbox.rughh.mongodb.net/sample_supplies
+Export with JSON:
+    mongoexport --uri="mongodb+srv://<your username>:<your password>@<your cluster>.mongodb.net/sample_supplies" --collection=sales --out=sales.json
+Import BSON (created from mongodump):
+    mongorestore --uri "mongodb+srv://<your username>:<your password>@<your cluster>.mongodb.net/sample_supplies"  --drop dump
+    mongorestore --uri mongodb+srv://m001-student:m001-student-basic@sandbox.rughh.mongodb.net --drop dump
+Import JSON:
+    mongoimport --uri="mongodb+srv://<your username>:<your password>@<your cluster>.mongodb.net/sample_supplies" --drop sales.json
+    
+drop- removes existing database in the same location
+
+
+Connect to the atlas cluster: (get instructions from atlas website)
+    mongo "mongodb+srv://sandbox.rughh.mongodb.net/admin" --username m001-student
+    
+Connect to local mongodb database:
+    mongo "localhost:27017"
+
+Show all databases
+    show dbs
+
+Switch to a database:
+    use sample_training
+
+Show collections (tables) in a database:
+    show collections
+
+Query a collection:
+    db.zips.find({"state": "NY"})
+    db.zips.findOne()
+    
+Aggregate query:
+    db.zips.find({"state": "NY"}).count()
+
+multiple conditions:
+    db.zips.find({"state": "NY", "city": "ALBANY"})
+
+pretty print xml:
+    db.zips.find({"state": "NY", "city": "ALBANY"}).pretty()
+
+Get random document from the collection:
+    db.inspections.findOne();
+
+Insert a document into the collection:
+    db.inspections.insert({
+        "_id" : ObjectId("56d61033a378eccde8a8354f"),
+        "id" : "10021-2015-ENFO",
+        "certificate_number" : 9278806,
+        "business_name" : "ATLIXCO DELI GROCERY INC.",
+        "date" : "Feb 20 2015",
+        "result" : "No Violation Issued",
+        "sector" : "Cigarette Retail Dealer - 127",
+        "address" : {
+                "city" : "RIDGEWOOD",
+                "zip" : 11385,
+                "street" : "MENAHAN ST",
+                "number" : 1712
+        }
+    })
+
+Insert multiple documents:
+    db.inspections.insert([{ "_id": 1, "test": 1 },{ "_id": 1, "test": 2 },
+                       { "_id": 3, "test": 3 }])
+    
+    #Produces duplicate key error "_id". Only the first "_id": 1 is inserted
+  
+Insert multiple documents (ordered false):
+    db.inspections.insert([{ "_id": 1, "test": 1 },{ "_id": 1, "test": 2 },
+                       { "_id": 3, "test": 3 }],{ "ordered": false })
+
+Update multiple documents in a collection:
+    db.zips.updateMany({ "city": "HUDSON" }, { "$inc": { "pop": 10 } })
+    # increments pop field by 10
+    
+Update/Add to a single document:
+    db.zips.updateOne({ "zip": "12534" }, { "$set": { "pop": 17630 } })
+
+Update/Add to a document array element:
+    db.grades.updateOne({ "student_id": 250, "class_id": 339 },
+                     { "$push": { "scores": { "type": "extra credit",
+                                             "score": 100 }
+                                }
+                     })
+                       
+Delete multiple documents:
+    db.inspections.deleteMany({ "test": 1 })
+    
+Delete a single document:
+    db.inspections.deleteOne({ "test": 3 })
+    
+Delete a collection:
+    db.inspection.drop()
+    
+
+MQL operators:
+    Update operators:
+        $inc, $set, $unset
+        Examples:
+            db.zips.updateMany({ "city": "HUDSON" }, { "$inc": { "pop": 10 } })
+            db.zips.updateOne({ "zip": "12534" }, { "$set": { "pop": 17630 } })
+            
+    Query operators:
+        $eq, $ne, $gt, $lt, $gte, $lte
+        
+        { <field> : { <operator>: <value> } }
+    
+        Example:
+            db.trips.find({ "tripduration": { "$lte" : 70 }, "usertype": { "$ne": "Subscriber" } }).pretty()
+                
+    Logical operators:
+        $and, $or, $nor, 
+            {<operator> : [{statement1}, {statement2}, ...]}
+        $not
+            {$not : {statement}}
+
+        Example:
+            {"$and": [{"student_id": {"$gt":25}}, {"student_id":{"$lt":100}}]}
+            same as:
+                {"student_id":{"$gt":25}}, {"student_id":{"$lt":100}}
+            same as:
+                {"student_id": {"$gt":25, "$lt":100}}
+                
+        Example: Compound conditions
+            db.routes.find({ "$and": [ { "$or" :[ { "dst_airport": "KZN" },
+                                                  { "src_airport": "KZN" }
+                                                ] },
+                                       { "$or" :[ { "airplane": "CR2" },
+                                                  { "airplane": "A81" } ] }
+                                     ] }).pretty()
+                                     
+    Expressive operator: (use to compare values in the same document)
+        {$expr: {<expression>}}
+        Example:
+            db.trips.find({"$expr":{"$eq":["$end station id", "$start station id"]} })
+            db.trips.find({"$expr": {"$and":[ {"$gt": ["$tripduration", 1200]},
+                                              {"$eq": ["$end station id", "$start station id"]}
+                                            ]
+                                    }
+                          })
+                          
+    Array operators: (Operators for array type)
+        Example:
+            # returns all documents where the specified array contains the given element
+            db.listingsAndReviews.find({"amenities":"shampoo"})
+            
+            # returns exact matches to the array
+            db.listingsAndReviews.find({"amenities":["shampoo"]})
+            
+            # $all- returns documents where array has all elements
+            # $size- returns documents where array is the given length
+            db.listingsAndReviews.find({ "amenities": 
+                                        {
+                                             "$size": 20,
+                                             "$all": [   "Internet", "Wifi",  "Kitchen",
+                                                         "Heating", "Family/kid friendly",
+                                                         "Washer", "Dryer", "Essentials",
+                                                         "Shampoo", "Hangers",
+                                                         "Hair dryer", "Iron",
+                                                         "Laptop friendly workspace" ]
+                                        }
+                                       }).pretty()
+                                       
+    Projection: (Display only the fields specified)
+        # Display only price and address
+        Example:
+            db.listingsAndReviews.find({ "amenities":
+                                            { "$size": 20, "$all": [ "Internet", "Wifi",  "Kitchen", "Heating",
+                                                                     "Family/kid friendly", "Washer", "Dryer",
+                                                                     "Essentials", "Shampoo", "Hangers",
+                                                                     "Hair dryer", "Iron",
+                                                                     "Laptop friendly workspace" 
+                                                                   ] 
+                                            } 
+                                       },
+                                       {"price": 1, "address": 1} ).pretty()
+                                       
+            db.listingsAndReviews.find({ "amenities": "Wifi" },
+                                       { "price": 1, "address": 1, "_id": 0 }).pretty()
+        
+        # Find an element in an array
+        Example:
+            # Display document that matches class_id and scores array has an element greater than 85
+            db.grades.find({ "class_id": 431 },
+                           { "scores": { "$elemMatch": { "score": { "$gt": 85 } } }
+                           }).pretty()
+
+            # Display document where array scores has element "type": "extra credit"
+            db.grades.find({ "scores": { "$elemMatch": { "type": "extra credit" } }
+                           }).pretty()
+                           
+    Array operators and sub-documents:
+        # type field under "start station location"
+        db.trips.findOne({ "start station location.type": "Point" })
+        
+        # Specific element of an array
+        db.companies.find({ "relationships.0.person.last_name": "Zuckerberg" },
+                          { "name": 1 }).pretty()
+        
+        # with regular expression
+        db.companies.find({ "relationships.0.person.first_name": "Mark",
+                            "relationships.0.title": { "$regex": "CEO" } },
+                            { "name": 1 }).count()
+                            
+        # Match any element of an array
+        db.companies.find({ "relationships":
+                                            { "$elemMatch": { "is_past": true,
+                                                              "person.first_name": "Mark" } } },
+                          { "name": 1 }).count()
+                          
+Aggregation framework:
+    #Another way to query data
+    db.listingsAndReviews.find({ "amenities": "Wifi" },
+                       { "price": 1, "address": 1, "_id": 0 }).pretty()
+    Is same as:
+    db.listingsAndReviews.aggregate([
+                              { "$match": { "amenities": "Wifi" } },
+                              { "$project": { "price": 1,
+                                              "address": 1,
+                                              "_id": 0 }}]).pretty()
+
+    # Aggregate with group option
+    db.listingsAndReviews.aggregate([ { "$project": { "address": 1, "_id": 0 }}, 
+                                      { "$group": { "_id": "$address.country" }}
+                                    ])
+
+    # Aggregate with group option
+    db.listingsAndReviews.aggregate([
+                                      { "$project": { "address": 1, "_id": 0 }},
+                                      { "$group": { "_id": "$address.country",
+                                                    "count": { "$sum": 1 },
+                                                  }
+                                      }
+                                    ])
+                                    
+Cursor methods:
+    pretty(), count(), sort(), limit()
+    
+    sort()
+    Example:
+        # Increasing by population, decreasing by city
+        db.zips.find().sort({"pop" : 1, "city": -1})
+
+    limit()
+    Example:
+        # Display document with the smallest pop
+        db.zips.find().sort({ "pop": 1 }).limit(1)
+        # Display document with the largest pop
+        db.zips.find().sort({ "pop": -1 }).limit(1)
+        
+Index
+    - A data structure that optimizes query
+    Example:
+        # create an index on the birth year field in increasing order
+        db.trips.createIndex({"birth year": 1})
+        # create index on start station id an birthyear
+        db.trips.createIndex({"start station id": 1, "birth year": 1 })
+        
+Upsert:
+    "upsert": true:
+        # When the query predicate returns an empty cursor, the update operation creates a 
+          new document using the directive from the query predicate and the update predicate.
+        # When the query predicate returns a document, the update operation updates the document(s)
+    "upsert": false
+        # When the query predicate returns an empty cursor then there will be no updated 
+          documents as a result of this operation
+    Example:
+        db.iot.updateOne({ "sensor": r.sensor, "date": r.date, "valcount": { "$lt": 48 } },
+                         { "$push": { "readings": { "v": r.value, "t": r.time } },
+                            "$inc": { "valcount": 1, "total": r.value } },
+                        { "upsert": true })
